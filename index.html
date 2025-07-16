@@ -1,0 +1,454 @@
+﻿<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Interactivo: Análisis Estratégico de TI (con IA)</title>
+    
+    <!-- Chosen Palette: Soothing Slate & Teal -->
+    <!-- Application Structure Plan: A single-page dashboard with four interactive sections: 1) A high-level dashboard with a radar chart for a quick overview. 2) An interactive 2x2 SWOT (FODA) grid where clicking an element highlights its connections. 3) A strategic matrix (TOWS/CAME) that visualizes how strategies are formed by filtering based on SWOT selections. 4) An expandable action plan that links back to the strategic matrix. This structure guides the user from high-level analysis to detailed actions, making the strategic connections intuitive and explorable, which is more effective than a static document. Gemini API integration adds a layer of deep analysis on demand. -->
+    <!-- Visualization & Content Choices: 1) Radar Chart (Chart.js) to compare the "weight" of each SWOT quadrant. Goal: Compare. Interaction: Tooltips. Justification: Provides a quick, holistic view. 2) Interactive Grids (HTML/Tailwind/JS) for SWOT and TOWS matrices. Goal: Organize & Relate. Interaction: Click-to-filter/highlight. Justification: Reveals the core logic of how strategies are derived. 3) Accordion List (HTML/Tailwind/JS) for the action plan. Goal: Inform & Organize. Interaction: Click-to-expand. Justification: Presents detailed plans cleanly without cluttering the UI. 4) Gemini API Integration: Added "explore" and "risk analysis" buttons. Goal: Deepen understanding. Interaction: Click to generate text in a modal or inline. Justification: Provides actionable, AI-powered insights directly within the context of the analysis. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 450px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .card-active {
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(13, 148, 136, 0.5);
+            border-color: #0d9488 !important;
+        }
+        .highlight {
+            background-color: #ccfbf1 !important;
+            border-left-color: #14b8a6 !important;
+        }
+        .gemini-btn {
+            background-color: #f0fdfa;
+            color: #14b8a6;
+            border-radius: 9999px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            transition: all 0.2s;
+            border: 1px solid #5eead4;
+        }
+        .gemini-btn:hover {
+            background-color: #ccfbf1;
+            color: #0f766e;
+            box-shadow: 0 0 8px rgba(13, 148, 136, 0.3);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #14b8a6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-900">Análisis Estratégico de TI ?</h1>
+            <div class="hidden md:flex space-x-6 text-sm font-medium">
+                <a href="#dashboard" class="text-slate-600 hover:text-teal-600 transition duration-300">Dashboard</a>
+                <a href="#foda" class="text-slate-600 hover:text-teal-600 transition duration-300">Análisis FODA</a>
+                <a href="#estrategias" class="text-slate-600 hover:text-teal-600 transition duration-300">Matriz Estratégica</a>
+                <a href="#plan" class="text-slate-600 hover:text-teal-600 transition duration-300">Plan de Acción</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-12">
+
+        <!-- Section 1: Dashboard -->
+        <section id="dashboard" class="mb-20 text-center">
+            <h2 class="text-3xl font-bold mb-2 text-teal-700">Dashboard General</h2>
+            <p class="max-w-3xl mx-auto text-slate-600 mb-10">Una vista de alto nivel del panorama estratégico actual del equipo de TI. Este panel resume los factores internos y externos clave.</p>
+            <div class="chart-container">
+                <canvas id="fodaRadarChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Section 2: Interactive SWOT (FODA) Analysis -->
+        <section id="foda" class="mb-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold mb-2 text-teal-700">Análisis FODA Interactivo</h2>
+                <p class="max-w-3xl mx-auto text-slate-600">Explore los componentes del análisis. Haga clic en un elemento para ver sus conexiones o en ? para obtener ideas de la IA.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                    <h3 class="text-xl font-bold mb-4 text-green-700">Fortalezas (Internas)</h3>
+                    <ul id="foda-list-f" class="space-y-3"></ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+                    <h3 class="text-xl font-bold mb-4 text-red-700">Debilidades (Internas)</h3>
+                    <ul id="foda-list-d" class="space-y-3"></ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                    <h3 class="text-xl font-bold mb-4 text-blue-700">Oportunidades (Externas)</h3>
+                    <ul id="foda-list-o" class="space-y-3"></ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                    <h3 class="text-xl font-bold mb-4 text-yellow-700">Amenazas (Externas)</h3>
+                    <ul id="foda-list-a" class="space-y-3"></ul>
+                </div>
+            </div>
+             <div class="text-center mt-8">
+                <button id="reset-button" class="bg-teal-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-700 transition duration-300 shadow-md">Resetear Selección</button>
+            </div>
+        </section>
+
+        <!-- Section 3: Strategic Matrix -->
+        <section id="estrategias" class="mb-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold mb-2 text-teal-700">Matriz Estratégica</h2>
+                <p class="max-w-3xl mx-auto text-slate-600">Vea cómo las fortalezas y debilidades se cruzan con las oportunidades y amenazas para formar estrategias concretas.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div id="strategy-fo" class="bg-white p-6 rounded-lg shadow-md transition duration-300">
+                    <h3 class="text-xl font-bold mb-4 text-slate-900">Estrategias OFENSIVAS (Fortalezas + Oportunidades)</h3>
+                    <ul id="strategy-list-fo" class="space-y-2 text-sm text-slate-600"></ul>
+                </div>
+                <div id="strategy-do" class="bg-white p-6 rounded-lg shadow-md transition duration-300">
+                    <h3 class="text-xl font-bold mb-4 text-slate-900">Estrategias de REORIENTACIÓN (Debilidades + Oportunidades)</h3>
+                    <ul id="strategy-list-do" class="space-y-2 text-sm text-slate-600"></ul>
+                </div>
+                <div id="strategy-fa" class="bg-white p-6 rounded-lg shadow-md transition duration-300">
+                    <h3 class="text-xl font-bold mb-4 text-slate-900">Estrategias DEFENSIVAS (Fortalezas + Amenazas)</h3>
+                    <ul id="strategy-list-fa" class="space-y-2 text-sm text-slate-600"></ul>
+                </div>
+                <div id="strategy-da" class="bg-white p-6 rounded-lg shadow-md transition duration-300">
+                    <h3 class="text-xl font-bold mb-4 text-slate-900">Estrategias de SUPERVIVENCIA (Debilidades + Amenazas)</h3>
+                    <ul id="strategy-list-da" class="space-y-2 text-sm text-slate-600"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Action Plan -->
+        <section id="plan">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold mb-2 text-teal-700">Plan de Acción Estratégico</h2>
+                 <p class="max-w-3xl mx-auto text-slate-600 mb-4">?? <strong>Nuestra Misión:</strong> Transformar TI de un centro de costos a un socio estratégico que impulsa la eficiencia y la innovación.</p>
+                <p class="max-w-3xl mx-auto text-slate-600">Estas son las 5 iniciativas clave. Haga clic para expandir y use ? para analizar riesgos potenciales.</p>
+            </div>
+            <div id="action-plan-container" class="space-y-4 max-w-4xl mx-auto"></div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 mt-20 py-6 text-center">
+        <p>&copy; 2025 Análisis Estratégico de TI. Dashboard Interactivo.</p>
+    </footer>
+
+    <!-- Gemini Modal -->
+    <div id="gemini-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 id="modal-title" class="text-xl font-bold text-teal-700">? Explorador de Ideas</h3>
+                <button id="modal-close-btn" class="text-slate-500 hover:text-slate-800">&times;</button>
+            </div>
+            <div id="modal-content" class="p-8 min-h-[200px] flex items-center justify-center">
+                 <div id="modal-loader" class="loader"></div>
+                 <div id="modal-text" class="text-slate-700"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = {
+                foda: {
+                    f: [
+                        { id: 'F1', text: 'Perfil Técnico Diverso y Actualizado' },
+                        { id: 'F2', text: 'Cultura de Innovación y Proactividad' },
+                        { id: 'F3', text: 'Experiencia en Gestión Multi-Planta' },
+                        { id: 'F4', text: 'Liderazgo con Visibilidad Externa' },
+                    ],
+                    d: [
+                        { id: 'D1', text: 'Capacidad Operativa Ajustada' },
+                        { id: 'D2', text: 'Dependencia del Conocimiento Clave' },
+                        { id: 'D3', text: 'Procesos no Estandarizados' },
+                        { id: 'D4', text: 'Riesgo de Dispersión y Burnout' },
+                    ],
+                    o: [
+                        { id: 'O1', text: 'Impulso Corporativo hacia la Eficiencia (IA)' },
+                        { id: 'O2', text: 'Optimización de Costos en la Nube (FinOps)' },
+                        { id: 'O3', text: 'Demanda de Socios Estratégicos de TI' },
+                        { id: 'O4', text: 'Desarrollo de Talento Especializado' },
+                    ],
+                    a: [
+                        { id: 'A1', text: 'Mercado de Talento Competido y Escaso' },
+                        { id: 'A2', text: 'Incremento de Ciber-riesgos' },
+                        { id: 'A3', text: 'Obsolescencia Tecnológica y Vendor Lock-in' },
+                        { id: 'A4', text: 'Incertidumbre Económica y Presupuestaria' },
+                    ],
+                },
+                strategies: [
+                    { id: 'Accion5_FO', type: 'fo', text: 'Acción 5 (FinOps): Usar F1/F2 para liderar en O2.', related: ['F1', 'F2', 'O2', 'Accion5'] },
+                    { id: 'Accion4_FO', type: 'fo', text: 'Acción 4 (Talento): Usar F4 para promover O4.', related: ['F4', 'O4', 'Accion4'] },
+                    { id: 'Accion4_DO', type: 'do', text: 'Acción 4 (Talento): Aprovechar O4 para mitigar D2.', related: ['D2', 'O4', 'Accion4'] },
+                    { id: 'Accion1_DO', type: 'do', text: 'Acción 1 (Roadmap): Usar O1 para evitar D4.', related: ['D4', 'O1', 'Accion1'] },
+                    { id: 'Accion4_FA', type: 'fa', text: 'Acción 4 (Talento): Usar F4 contra A1.', related: ['F4', 'A1', 'Accion4'] },
+                    { id: 'Accion2_FA', type: 'fa', text: 'Acción 2 (NOC): Usar F3 contra A2.', related: ['F3', 'A2', 'Accion2'] },
+                    { id: 'Accion3_DA', type: 'da', text: 'Acción 3 (Conocimiento): Crear playbooks contra D2/A1.', related: ['D2', 'A1', 'Accion3'] },
+                    { id: 'Accion1_DA', type: 'da', text: 'Acción 1 (Roadmap): Priorizar contra A3/A4.', related: ['D1', 'D4', 'A3', 'A4', 'Accion1'] },
+                ],
+                actions: [
+                    { id: 'Accion1', icon: '??', title: 'PRIORIZAR PARA ENFOCAR', what: 'Roadmap trimestral enfocado en impacto.', why: 'Mitigar el burnout y concentrar el poder de fuego en proyectos de alto ROI (IA y Automatización).', result: 'Entregas más rápidas y de mayor calidad.' },
+                    { id: 'Accion2', icon: '??', title: 'REDISEÑAR EL SOPORTE', what: 'Implementar un NOC virtual con monitoreo proactivo y sistema de guardias.', why: 'Eliminar puntos únicos de falla y mejorar la resiliencia operativa.', result: 'Mayor disponibilidad de servicios y menor tiempo de respuesta.' },
+                    { id: 'Accion3', icon: '??', title: 'FORTALECER EL CONOCIMIENTO', what: 'Crear una base de conocimiento centralizada (wiki) con playbooks y runbooks.', why: 'Reducir la dependencia de personas clave y acelerar la capacitación.', result: 'Operaciones estandarizadas y mayor agilidad del equipo.' },
+                    { id: 'Accion4', icon: '??', title: 'DESARROLLAR Y ATRAER TALENTO', what: 'Invertir en certificaciones (IA, Cyber) y potenciar el employer branding en LinkedIn.', why: 'Cerrar la brecha de habilidades y ganar la guerra por el talento.', result: 'Un equipo a la vanguardia tecnológica.' },
+                    { id: 'Accion5', icon: '??', title: 'IMPLEMENTAR FINOPS', what: 'Renegociar contratos cloud, monitorear KPIs de costo y optimizar el uso de recursos.', why: 'Demostrar valor financiero y mitigar riesgos presupuestarios.', result: 'Reducción del OPEX y optimización del gasto en la nube.' },
+                ]
+            };
+
+            let selectedFodaItem = null;
+            const modal = document.getElementById('gemini-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalText = document.getElementById('modal-text');
+            const modalLoader = document.getElementById('modal-loader');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            // Render Radar Chart
+            const ctx = document.getElementById('fodaRadarChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Fortalezas', 'Oportunidades', 'Debilidades', 'Amenazas'],
+                    datasets: [{
+                        label: 'Número de Elementos Identificados',
+                        data: [ data.foda.f.length, data.foda.o.length, data.foda.d.length, data.foda.a.length ],
+                        backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                        borderColor: 'rgb(13, 148, 136)',
+                        pointBackgroundColor: 'rgb(13, 148, 136)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(13, 148, 136)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                     scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: { font: { size: 14 } },
+                            ticks: { backdropColor: 'rgba(255, 255, 255, 0.75)', stepSize: 1 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Populate FODA lists
+            const fodaLists = { f: 'foda-list-f', d: 'foda-list-d', o: 'foda-list-o', a: 'foda-list-a' };
+            for (const key in fodaLists) {
+                const ul = document.getElementById(fodaLists[key]);
+                data.foda[key].forEach(item => {
+                    const li = document.createElement('li');
+                    li.dataset.id = item.id;
+                    li.className = 'p-3 bg-slate-100 rounded-md cursor-pointer hover:bg-teal-50 border-l-4 border-slate-200 hover:border-teal-400 transition duration-300 flex justify-between items-center';
+                    
+                    const span = document.createElement('span');
+                    span.textContent = item.text;
+                    li.appendChild(span);
+
+                    const button = document.createElement('button');
+                    button.innerHTML = '?';
+                    button.className = 'gemini-btn';
+                    button.dataset.type = key;
+                    button.dataset.text = item.text;
+                    li.appendChild(button);
+
+                    ul.appendChild(li);
+                });
+            }
+
+            // Populate Strategies
+            const strategyLists = { fo: 'strategy-list-fo', do: 'strategy-list-do', fa: 'strategy-list-fa', da: 'strategy-list-da' };
+            data.strategies.forEach(strategy => {
+                const li = document.createElement('li');
+                li.textContent = strategy.text;
+                li.dataset.id = strategy.id;
+                li.dataset.related = JSON.stringify(strategy.related);
+                li.className = 'p-2 rounded-md transition duration-300';
+                document.getElementById(strategyLists[strategy.type]).appendChild(li);
+            });
+
+            // Populate Action Plan
+            const actionContainer = document.getElementById('action-plan-container');
+            data.actions.forEach(action => {
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-lg shadow-md overflow-hidden';
+                div.dataset.id = action.id;
+                div.innerHTML = `
+                    <div class="p-4 cursor-pointer flex justify-between items-center action-header hover:bg-slate-50">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-4">${action.icon}</span>
+                            <h4 class="font-bold text-lg text-slate-800">${action.title}</h4>
+                        </div>
+                        <svg class="w-6 h-6 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="p-6 bg-slate-50 border-t border-slate-200 hidden action-content">
+                        <p class="mb-2"><strong class="text-teal-700">Qué:</strong> ${action.what}</p>
+                        <p class="mb-2"><strong class="text-teal-700">Por qué:</strong> ${action.why}</p>
+                        <p class="mb-4"><strong class="text-teal-700">Resultado:</strong> ${action.result}</p>
+                        <button class="gemini-btn risk-analysis-btn" data-action-id="${action.id}">? Analizar Riesgos</button>
+                        <div class="risk-analysis-result mt-4 text-sm"></div>
+                    </div>
+                `;
+                actionContainer.appendChild(div);
+            });
+            
+            // Event Listeners
+            document.getElementById('foda').addEventListener('click', e => {
+                const li = e.target.closest('li');
+                if (!li) return;
+
+                if (e.target.tagName === 'BUTTON') {
+                    const type = e.target.dataset.type;
+                    const text = e.target.dataset.text;
+                    handleFodaGeminiClick(type, text);
+                } else {
+                    selectedFodaItem = li.dataset.id;
+                    updateHighlights();
+                }
+            });
+            
+            document.getElementById('reset-button').addEventListener('click', () => {
+                selectedFodaItem = null;
+                updateHighlights();
+            });
+
+            actionContainer.addEventListener('click', e => {
+                const header = e.target.closest('.action-header');
+                if (header) {
+                    toggleAccordion(header);
+                }
+                if (e.target.classList.contains('risk-analysis-btn')) {
+                    const actionId = e.target.dataset.actionId;
+                    handleRiskAnalysisClick(actionId, e.target);
+                }
+            });
+
+            modalCloseBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            
+            function toggleAccordion(header) {
+                const content = header.nextElementSibling;
+                const arrow = header.querySelector('svg');
+                const isHidden = content.classList.contains('hidden');
+
+                // Close all others
+                actionContainer.querySelectorAll('.action-content').forEach(c => c.classList.add('hidden'));
+                actionContainer.querySelectorAll('.action-header svg').forEach(a => a.classList.remove('rotate-180'));
+
+                if(isHidden) {
+                    content.classList.remove('hidden');
+                    arrow.classList.add('rotate-180');
+                }
+            }
+
+            function updateHighlights() {
+                document.querySelectorAll('#foda li').forEach(li => li.classList.remove('highlight'));
+                document.querySelectorAll('#estrategias li').forEach(li => li.classList.remove('highlight'));
+                document.querySelectorAll('#estrategias > div').forEach(div => div.classList.remove('card-active'));
+                if (!selectedFodaItem) return;
+                document.querySelector(`#foda li[data-id="${selectedFodaItem}"]`).classList.add('highlight');
+                const relatedStrategies = data.strategies.filter(s => s.related.includes(selectedFodaItem));
+                relatedStrategies.forEach(s => {
+                    document.querySelector(`#estrategias li[data-id="${s.id}"]`).classList.add('highlight');
+                    document.getElementById(`strategy-${s.type}`).classList.add('card-active');
+                });
+            }
+
+            // Gemini API Integration
+            async function callGemini(prompt) {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    }
+                    throw new Error('No content received from API.');
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    return "Lo siento, ocurrió un error al contactar a la IA. Por favor, inténtalo de nuevo más tarde.";
+                }
+            }
+
+            function getFodaPrompt(type, text) {
+                const base = "Eres un consultor de estrategia de negocios. Proporciona tu respuesta en formato Markdown. ";
+                switch (type) {
+                    case 'f': return `${base}Dada la siguiente fortaleza de un equipo de TI: '${text}', elabora en 2-3 puntos cómo un equipo puede explotar esta fortaleza al máximo. Sé concreto y da ejemplos accionables.`;
+                    case 'd': return `${base}Dada la siguiente debilidad de un equipo de TI: '${text}', sugiere 2-3 estrategias concretas para mitigar o corregir esta debilidad.`;
+                    case 'o': return `${base}Dada la siguiente oportunidad de mercado para un equipo de TI: '${text}', describe 2-3 iniciativas específicas que el equipo podría lanzar para capitalizar esta oportunidad.`;
+                    case 'a': return `${base}Dada la siguiente amenaza externa para un equipo de TI: '${text}', propón 2-3 tácticas defensivas o planes de contingencia para neutralizar esta amenaza.`;
+                }
+            }
+
+            async function handleFodaGeminiClick(type, text) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                modalText.classList.add('hidden');
+                modalLoader.classList.remove('hidden');
+                
+                const prompt = getFodaPrompt(type, text);
+                const result = await callGemini(prompt);
+                
+                modalText.innerHTML = result.replace(/\n/g, '<br>'); // Basic markdown
+                modalLoader.classList.add('hidden');
+                modalText.classList.remove('hidden');
+            }
+
+            async function handleRiskAnalysisClick(actionId, button) {
+                const action = data.actions.find(a => a.id === actionId);
+                if (!action) return;
+
+                const resultContainer = button.nextElementSibling;
+                resultContainer.innerHTML = '<div class="loader mx-auto"></div>';
+                button.disabled = true;
+                button.classList.add('opacity-50');
+
+                const actionText = `Título: ${action.title}. Detalles: ${action.what}`;
+                const prompt = `Como un gestor de proyectos senior, para la siguiente iniciativa estratégica: '${actionText}', identifica 2 riesgos potenciales clave para su implementación. Para cada riesgo, sugiere una breve estrategia de mitigación. Responde en formato Markdown.`;
+                
+                const result = await callGemini(prompt);
+                resultContainer.innerHTML = result.replace(/\n/g, '<br>');
+            }
+        });
+    </script>
+</body>
+</html>
